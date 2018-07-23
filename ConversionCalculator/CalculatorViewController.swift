@@ -13,10 +13,16 @@ class CalculatorViewController: UIViewController {
     @IBOutlet weak var outputDisplay: UITextField!
     @IBOutlet weak var inputDisplay: UITextField!
     
-    let converterArray = [Converter(label: "fahrenheit to celcius", inputUnit: "°F", outputUnit: "°C"),
-                          Converter(label: "celcius to fahrenheit", inputUnit: "°C", outputUnit: "°F"),
-                          Converter(label: "miles to kilometers", inputUnit: "mi", outputUnit: "km"),
-                          Converter(label: "kilometers to miles", inputUnit: "km", outputUnit: "mi")]
+    var numberToBeConverted: String = ""
+    var inputIsNegative = false
+    var decimalIsPresent = false
+    
+    var currentConverter: Converter = Converter(label: ConverterType.fToC, inputUnit: "°F", outputUnit: "°C")
+    
+    let converterArray = [Converter(label: ConverterType.fToC, inputUnit: "°F", outputUnit: "°C"),
+                          Converter(label: ConverterType.cToF, inputUnit: "°C", outputUnit: "°F"),
+                          Converter(label: ConverterType.miToKm, inputUnit: "mi", outputUnit: "km"),
+                          Converter(label: ConverterType.kmToMi, inputUnit: "km", outputUnit: "mi")]
     
     let actionSheet = UIAlertController(title: "Choose Converter", message: nil, preferredStyle: UIAlertControllerStyle.actionSheet)
     
@@ -27,14 +33,11 @@ class CalculatorViewController: UIViewController {
         inputDisplay.text = converterArray[0].inputUnit
         
         for converter in converterArray {
-            actionSheet.addAction(UIAlertAction(title: converter.label, style: .default, handler: { (_) in
-                self.outputDisplay.text = converter.outputUnit
-                self.inputDisplay.text = converter.inputUnit
+            actionSheet.addAction(UIAlertAction(title: converter.label.rawValue, style: .default, handler: { (_) in
+                self.currentConverter = converter
+                self.updateInputField()
             }))
         }
-
-        
-        // Do any additional setup after loading the view.
     }
 
     override func didReceiveMemoryWarning() {
@@ -46,20 +49,74 @@ class CalculatorViewController: UIViewController {
         self.present(actionSheet, animated: true, completion: nil)
     }
     
-    /*
-    // MARK: - Navigation
-
-    // In a storyboard-based application, you will often want to do a little preparation before navigation
-    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
-        // Get the new view controller using segue.destinationViewController.
-        // Pass the selected object to the new view controller.
+    @IBAction func handleClear(_ sender: Any) {
+        outputDisplay.text = currentConverter.outputUnit
+        numberToBeConverted = ""
+        updateInputField()
     }
-    */
-
+    
+    @IBAction func handleSignSwitch(_ sender: Any) {
+        if !numberToBeConverted.isEmpty {
+            if !inputIsNegative {
+                inputIsNegative = true
+                numberToBeConverted = "-" + numberToBeConverted
+            }else {
+                inputIsNegative = false
+                numberToBeConverted.remove(at: numberToBeConverted.startIndex)
+            }
+            updateInputField()
+        }
+    }
+    
+    @IBAction func handleDecimal(_ sender: Any) {
+        if decimalIsPresent {
+            return
+        }
+        numberToBeConverted += "."
+        decimalIsPresent = true
+        updateInputField()
+    }
+    
+    @IBAction func handleInput(_ sender: UIButton) {
+        numberToBeConverted += String(sender.tag)
+        updateInputField()
+    }
+    
+    func updateInputField() {
+        inputDisplay.text = numberToBeConverted + " " + currentConverter.inputUnit
+        convert()
+    }
+    
+    func convert() {
+        guard let input = Double(numberToBeConverted) else {
+            return
+        }
+        var output:Double? = nil
+        
+        switch currentConverter.label {
+        case .fToC:
+            output = (input - 32) * 5/9
+        case .cToF:
+            output = (input * 9/5) + 32
+        case .miToKm:
+            output = (input / 0.62137)
+        case .kmToMi:
+            output = (input * 0.62137)
+        }
+        
+        outputDisplay.text = String(format: "%.2f", output!) + " " + currentConverter.outputUnit
+    }
 }
 
 struct Converter {
-    let label:String
+    let label:ConverterType
     let inputUnit:String
     let outputUnit:String
+}
+
+enum ConverterType: String {
+    case cToF = "celsius to fahrenheit"
+    case fToC = "fahrenheit to celsius"
+    case kmToMi = "kilometers to miles"
+    case miToKm = "miles to kilometers"
 }
